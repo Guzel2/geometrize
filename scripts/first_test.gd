@@ -96,11 +96,8 @@ func geometrize():
 		
 		geometrize_pixels.append(line)
 	
-	print(width)
-	print(height)
-	
-	
 	for i in rect_count:
+		break
 		var new_rect = generate_rect()
 		
 		apply_rect(new_rect)
@@ -108,6 +105,14 @@ func geometrize():
 		await get_tree().create_timer(.001).timeout
 		
 		print("Progress: ", i, "/", rect_count)
+	
+	var new_rect = DrawRect.new()
+	new_rect.size = Vector2(5, 5)
+	new_rect.color = Color(0, 0.4118, 0.7255, 1)
+	
+	new_rect.difference = compare_rect(new_rect)
+	
+	apply_rect(new_rect)
 	
 	print("done")
 	
@@ -192,7 +197,7 @@ func compare_rect(rect: DrawRect) -> float:
 			
 			var old_difference = Vector4(old_color_difference.r, old_color_difference.g, old_color_difference.b, old_color_difference.a).length()
 			
-			var new_color = old_color + rect.color
+			var new_color = rect.color
 			new_color.r = clamp(new_color.r, 0, 1)
 			new_color.g = clamp(new_color.g, 0, 1)
 			new_color.b = clamp(new_color.b, 0, 1)
@@ -203,6 +208,10 @@ func compare_rect(rect: DrawRect) -> float:
 			
 			total_old_difference += old_difference
 			total_new_difference += new_difference
+			
+			print("image: ", image_color)
+			print("old: ", old_color_difference)
+			print("new: ", new_color_difference)
 			
 			var difference = new_difference - old_difference
 			total_difference += difference
