@@ -22,9 +22,13 @@ var width = 10
 var height = 10
 
 var rect_min_size = 20
-var rects_per_generation = 10
+var rects_per_generation = 100
 var evolution_randomness = .8
-var rect_count = 10
+var rect_count = 250
+
+var folder_path = "res://generated_images"
+var prefix = "mt_fuji"
+var suffix = ".png"
 
 func _process(delta):
 	if run:
@@ -46,7 +50,7 @@ func _draw():
 
 func get_image_pixel(x: int, y: int) -> Color:
 	return image_pixels[x][y]
-	
+
 func get_image_pixelv(vec: Vector2) -> Color:
 	return image_pixels[vec.x][vec.y]
 
@@ -97,7 +101,6 @@ func geometrize():
 		geometrize_pixels.append(line)
 	
 	for i in rect_count:
-		break
 		var new_rect = generate_rect()
 		
 		apply_rect(new_rect)
@@ -106,19 +109,34 @@ func geometrize():
 		
 		print("Progress: ", i, "/", rect_count)
 	
-	var new_rect = DrawRect.new()
-	new_rect.size = Vector2(5, 5)
-	new_rect.color = Color(0, 0.4118, 0.7255, 1)
-	
-	new_rect.difference = compare_rect(new_rect)
-	
-	apply_rect(new_rect)
-	
 	print("done")
 	
 	var time = Time.get_unix_time_from_system() - start_time
 	
 	print(time)
+	
+	var new_image = image.duplicate() as Image
+	
+	for x in width:
+		for y in height:
+			new_image.set_pixel(x, y, get_geometrize_pixel(x, y))
+	
+	
+	new_image.save_png(folder_path + "/" + prefix + "_" + str(get_existing_images_count()) + suffix)
+
+func get_existing_images_count() -> int:
+	var dir = DirAccess.open(folder_path)
+	if dir:
+		dir.list_dir_begin()
+		var file_name = dir.get_next()
+		var count = 0
+		while file_name != "":
+			if file_name.begins_with(prefix) and file_name.ends_with(suffix):
+				count += 1
+			file_name = dir.get_next()
+		dir.list_dir_end()
+		return count
+	return 0
 
 func generate_rect(original_rect : DrawRect = null) -> DrawRect:
 	var new_rects  = []
@@ -159,7 +177,7 @@ func generate_rect(original_rect : DrawRect = null) -> DrawRect:
 			#rect.color = Color(randf_range(0, 1), randf_range(0, 1), randf_range(0, 1), randf_range(0, 1))
 			
 			rect.color = get_image_pixelv(rect.position + rect.size / 2)
-			rect.color.a = randf_range(.5, 1)
+			rect.color.a = randf_range(.25, 1)
 		
 		new_rects.append(rect)
 	
@@ -174,7 +192,6 @@ func generate_rect(original_rect : DrawRect = null) -> DrawRect:
 			lowest_difference = rect.difference
 			best_rect = rect
 	
-	print(lowest_difference)
 	return best_rect
 
 func compare_rect(rect: DrawRect) -> float:
@@ -188,8 +205,8 @@ func compare_rect(rect: DrawRect) -> float:
 			var x = int(loc_x + rect.position.x)
 			var y = int(loc_y + rect.position.y)
 			
-			#if x % 2 == 1 or y % 2 == 1:
-			#	continue
+			if x % 2 == 1 or y % 2 == 1:
+				continue
 			
 			var image_color = get_image_pixel(x, y)
 			var old_color = get_geometrize_pixel(x, y)
@@ -197,21 +214,17 @@ func compare_rect(rect: DrawRect) -> float:
 			
 			var old_difference = Vector4(old_color_difference.r, old_color_difference.g, old_color_difference.b, old_color_difference.a).length()
 			
-			var new_color = rect.color
+			var new_color = old_color * (1 - rect.color.a) + rect.color * rect.color.a
 			new_color.r = clamp(new_color.r, 0, 1)
 			new_color.g = clamp(new_color.g, 0, 1)
 			new_color.b = clamp(new_color.b, 0, 1)
-			new_color.a = clamp(new_color.a, 0, 1)
+			new_color.a = 1
 			var new_color_difference = new_color - image_color
 			
 			var new_difference = Vector4(new_color_difference.r, new_color_difference.g, new_color_difference.b, new_color_difference.a).length()
 			
-			total_old_difference += old_difference
-			total_new_difference += new_difference
-			
-			print("image: ", image_color)
-			print("old: ", old_color_difference)
-			print("new: ", new_color_difference)
+			#total_old_difference += old_difference
+			#total_new_difference += new_difference
 			
 			var difference = new_difference - old_difference
 			total_difference += difference
@@ -220,8 +233,6 @@ func compare_rect(rect: DrawRect) -> float:
 			#else:
 			#	total_difference += difference * 1
 	
-	print(total_new_difference - total_old_difference)
-	print(total_difference)
 	return total_difference
 
 func apply_rect(rect : DrawRect):
@@ -230,11 +241,11 @@ func apply_rect(rect : DrawRect):
 			var x = int(loc_x + rect.position.x)
 			var y = int(loc_y + rect.position.y)
 			
-			var new_color = get_geometrize_pixel(x, y) + rect.color
+			var new_color = get_geometrize_pixel(x, y) * (1 - rect.color.a) + rect.color * rect.color.a
 			new_color.r = clamp(new_color.r, 0, 1)
 			new_color.g = clamp(new_color.g, 0, 1)
 			new_color.b = clamp(new_color.b, 0, 1)
-			new_color.a = clamp(new_color.a, 0, 1)
+			new_color.a = 1
 			
 			set_geometrize_pixel(x, y, new_color)
 	
